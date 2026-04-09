@@ -385,9 +385,6 @@
         };
 
         window.exportarPDF = function() {
-            const btn = document.getElementById('btn_pdf');
-
-            // Coletar dados atuais da tela
             const material  = document.getElementById('material').value;
             const nps       = document.getElementById('nps').value;
             const thickness = document.getElementById('thickness').value;
@@ -413,112 +410,174 @@
             const area = Math.PI * (od * t - t * t);
             const now  = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-            // A4 a 96dpi = 794px de largura; margens de 10mm (~38px) → área útil ≈ 718px × 1047px
-            const html = `
-<div style="font-family: Arial, sans-serif; color: #1e293b; background: #fff; width: 714px; box-sizing: border-box;">
+            const win = window.open('', '_blank');
+            win.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Cálculo de Peso de Tubulação</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    background: #fff;
+    color: #1e293b;
+    padding: 20px;
+  }
+  .header {
+    background: #0ea5e9;
+    border-radius: 10px 10px 0 0;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .header-icon { font-size: 30px; line-height: 1; }
+  .header-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+  .header-sub { font-size: 11px; color: rgba(255,255,255,0.85); }
 
-  <!-- Cabeçalho -->
-  <div style="background: #0ea5e9; padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-radius: 8px 8px 0 0;">
-    <div style="font-size: 28px; line-height: 1;">📐</div>
-    <div>
-      <div style="font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 2px;">Calculadora de Peso de Tubulação</div>
-      <div style="font-size: 11px; color: rgba(255,255,255,0.85);">Memorial de Cálculo — Gerado em ${now}</div>
-    </div>
+  .section-params {
+    background: #f1f5f9;
+    border-left: 4px solid #0ea5e9;
+    padding: 14px 24px;
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-bottom: 10px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  .params-table td { padding: 5px 10px; font-size: 12.5px; }
+  .params-table tr:nth-child(even) { background: #e2e8f0; }
+  .lbl { color: #64748b; width: 22%; }
+  .val { font-weight: 600; color: #0f172a; width: 28%; }
+
+  .results-row {
+    display: flex;
+    gap: 16px;
+    padding: 16px 24px 0;
+  }
+  .result-box {
+    flex: 1;
+    border-radius: 10px;
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .result-box.blue { background: #0ea5e9; }
+  .result-box.dark { background: #0f172a; }
+  .res-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+  .res-value { font-size: 44px; font-weight: 700; line-height: 1; }
+  .res-unit  { font-size: 14px; margin-top: 4px; }
+  .blue .res-label { color: rgba(255,255,255,0.8); }
+  .blue .res-value { color: #fff; }
+  .blue .res-unit  { color: rgba(255,255,255,0.75); }
+  .dark .res-label { color: rgba(255,255,255,0.6); }
+  .dark .res-value { color: #fff; }
+  .dark .res-unit  { color: rgba(255,255,255,0.5); }
+
+  .section-memorial { padding: 16px 24px; }
+  .memorial-table td { padding: 7px 10px; font-size: 12px; font-family: 'Courier New', monospace; }
+  .memorial-table tr { border-bottom: 1px solid #e2e8f0; }
+  .memorial-table tr:nth-child(even) { background: #f8fafc; }
+  .formula { color: #64748b; width: 60%; }
+  .result  { font-weight: 600; color: #0f172a; }
+
+  .footer {
+    border-top: 1px solid #e2e8f0;
+    margin: 0 24px;
+    padding: 10px 0;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+
+  @media print {
+    body { padding: 0; }
+    @page { size: A4 portrait; margin: 10mm; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📐</div>
+  <div>
+    <div class="header-title">Calculadora de Peso de Tubulação</div>
+    <div class="header-sub">Memorial de Cálculo — Gerado em ${now}</div>
   </div>
+</div>
 
-  <!-- Parâmetros -->
-  <div style="background: #f1f5f9; padding: 14px 24px; border-left: 4px solid #0ea5e9;">
-    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 8px;">Parâmetros de Entrada</div>
-    <table style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
-      <tbody>
-        <tr>
-          <td style="padding: 5px 10px; color: #64748b; width: 22%;">Material</td>
-          <td style="padding: 5px 10px; font-weight: 600; color: #0f172a; width: 28%;">${material}</td>
-          <td style="padding: 5px 10px; color: #64748b; width: 22%;">Norma</td>
-          <td style="padding: 5px 10px; font-weight: 600; color: #0f172a;">${norma}</td>
-        </tr>
-        <tr style="background:#e2e8f0;">
-          <td style="padding: 5px 10px; color: #64748b;">Bitola (NPS)</td>
-          <td style="padding: 5px 10px; font-weight: 600; color: #0f172a;">${nps}"</td>
-          <td style="padding: 5px 10px; color: #64748b;">Diâmetro Externo</td>
-          <td style="padding: 5px 10px; font-weight: 600; color: #0f172a;">${od.toFixed(1)} mm</td>
-        </tr>
-        <tr>
-          <td style="padding: 5px 10px; color: #64748b;">Schedule</td>
-          <td style="padding: 5px 10px; font-weight: 600; color: #0f172a;">${schedule}</td>
-          <td style="padding: 5px 10px; color: #64748b;">Espessura</td>
-          <td style="padding: 5px 10px; font-weight: 600; color: #0f172a;">${thickness} mm</td>
-        </tr>
-        <tr style="background:#e2e8f0;">
-          <td style="padding: 5px 10px; color: #64748b;">Comprimento</td>
-          <td style="padding: 5px 10px; font-weight: 600; color: #0f172a;">${parseFloat(length).toFixed(2)} m</td>
-          <td style="padding: 5px 10px; color: #64748b;">Densidade</td>
-          <td style="padding: 5px 10px; font-weight: 600; color: #0f172a;">${density} kg/m³</td>
-        </tr>
-      </tbody>
-    </table>
+<div class="section-params">
+  <div class="section-label">Parâmetros de Entrada</div>
+  <table class="params-table">
+    <tr>
+      <td class="lbl">Material</td><td class="val">${material}</td>
+      <td class="lbl">Norma</td><td class="val">${norma}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Bitola (NPS)</td><td class="val">${nps}"</td>
+      <td class="lbl">Diâmetro Externo</td><td class="val">${od.toFixed(1)} mm</td>
+    </tr>
+    <tr>
+      <td class="lbl">Schedule</td><td class="val">${schedule}</td>
+      <td class="lbl">Espessura</td><td class="val">${thickness} mm</td>
+    </tr>
+    <tr>
+      <td class="lbl">Comprimento</td><td class="val">${parseFloat(length).toFixed(2)} m</td>
+      <td class="lbl">Densidade</td><td class="val">${density} kg/m³</td>
+    </tr>
+  </table>
+</div>
+
+<div class="results-row">
+  <div class="result-box blue">
+    <div class="res-label">Peso por Metro</div>
+    <div class="res-value">${weightPerM}</div>
+    <div class="res-unit">kg/m</div>
   </div>
-
-  <!-- Resultados em destaque -->
-  <div style="display: flex; gap: 14px; padding: 14px 24px 0;">
-    <div style="flex: 1; background: #0ea5e9; border-radius: 10px; padding: 16px 20px; text-align: center;">
-      <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.8); margin-bottom: 6px;">Peso por Metro</div>
-      <div style="font-size: 42px; font-weight: 700; color: #fff; line-height: 1;">${weightPerM}</div>
-      <div style="font-size: 14px; color: rgba(255,255,255,0.75); margin-top: 4px;">kg/m</div>
-    </div>
-    <div style="flex: 1; background: #0f172a; border-radius: 10px; padding: 16px 20px; text-align: center;">
-      <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.6); margin-bottom: 6px;">Peso Total</div>
-      <div style="font-size: 42px; font-weight: 700; color: #fff; line-height: 1;">${totalWeight}</div>
-      <div style="font-size: 14px; color: rgba(255,255,255,0.5); margin-top: 4px;">kg</div>
-    </div>
+  <div class="result-box dark">
+    <div class="res-label">Peso Total</div>
+    <div class="res-value">${totalWeight}</div>
+    <div class="res-unit">kg</div>
   </div>
+</div>
 
-  <!-- Memorial de Cálculo -->
-  <div style="padding: 14px 24px;">
-    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 8px;">Memorial de Cálculo</div>
-    <table style="width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'Courier New', monospace;">
-      <tbody>
-        <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 7px 10px; color: #64748b; width: 60%;">A = π × (OD × t − t²) &nbsp; [Área da seção transversal]</td>
-          <td style="padding: 7px 10px; font-weight: 600; color: #0f172a;">${area.toFixed(4)} mm²</td>
-        </tr>
-        <tr style="background:#f8fafc; border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 7px 10px; color: #64748b;">W/m = A × ρ ÷ 10⁶ &nbsp; [Peso linear]</td>
-          <td style="padding: 7px 10px; font-weight: 600; color: #0f172a;">${(area * density / 1e6).toFixed(6)} kg/m</td>
-        </tr>
-        <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 7px 10px; color: #64748b;">W = W/m × L &nbsp; [Peso total]</td>
-          <td style="padding: 7px 10px; font-weight: 600; color: #0f172a;">${(area * density / 1e6 * parseFloat(length)).toFixed(4)} kg</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+<div class="section-memorial">
+  <div class="section-label">Memorial de Cálculo</div>
+  <table class="memorial-table">
+    <tr>
+      <td class="formula">A = π × (OD × t − t²) &nbsp;[Área da seção transversal]</td>
+      <td class="result">${area.toFixed(4)} mm²</td>
+    </tr>
+    <tr>
+      <td class="formula">W/m = A × ρ ÷ 10⁶ &nbsp;[Peso linear]</td>
+      <td class="result">${(area * density / 1e6).toFixed(6)} kg/m</td>
+    </tr>
+    <tr>
+      <td class="formula">W = W/m × L &nbsp;[Peso total]</td>
+      <td class="result">${(area * density / 1e6 * parseFloat(length)).toFixed(4)} kg</td>
+    </tr>
+  </table>
+</div>
 
-  <!-- Rodapé -->
-  <div style="border-top: 1px solid #e2e8f0; margin: 0 24px; padding: 10px 0; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
-    <span>Calculadora de Peso de Tubulação</span>
-    <span>Gerado em ${now} • ${norma}</span>
-  </div>
+<div class="footer">
+  <span>Calculadora de Peso de Tubulação</span>
+  <span>Gerado em ${now} • ${norma}</span>
+</div>
 
-</div>`;
-
-            const container = document.createElement('div');
-            container.innerHTML = html;
-            document.body.appendChild(container);
-
-            btn.style.display = 'none';
-            const opt = {
-                margin:      [10, 10, 10, 10],
-                filename:    'calculo-peso-tubulacao.pdf',
-                image:       { type: 'jpeg', quality: 1 },
-                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 794 },
-                jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:   { mode: 'avoid-all' }
-            };
-            html2pdf().set(opt).from(container).save().then(function() {
-                document.body.removeChild(container);
-                btn.style.display = 'block';
-            });
+<script>
+  window.onload = function() {
+    window.print();
+  };
+<\/script>
+</body>
+</html>`);
+            win.document.close();
         };
 
         // Inicialização
@@ -526,6 +585,5 @@
             updateInterface();
         };
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
 </html>
