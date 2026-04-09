@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grok Studio • Calculadora de Peso de Tubulação</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 2rem 1rem;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        
+        .artifact-card {
+            background-color: #1e2937;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
+        
+        .input-label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        
+        .input-field {
+            width: 100%;
+            background-color: #334155;
+            border: 1px solid #475569;
+            border-radius: 16px;
+            padding: 14px 18px;
+            color: #f1f5f9;
+            font-size: 1.05rem;
+        }
+        
+        .input-field:focus {
+            border-color: #0ea5e9;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+        }
+        
+        .btn-primary {
+            width: 100%;
+            background-color: #0ea5e9;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            padding: 18px;
+            border-radius: 9999px;
+            margin-top: 16px;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0284c8;
+        }
+        
+        .result-card {
+            background-color: #f8fafc;
+            color: #0f172a;
+            border-radius: 24px;
+            padding: 32px;
+        }
+        
+        .result-value {
+            font-size: 3.2rem;
+            font-weight: 600;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="w-14 h-14 bg-sky-500 rounded-2xl flex items-center justify-center text-4xl shadow-lg">📐</div>
+            <div>
+                <h1 class="text-3xl font-semibold text-white">Calculadora de Peso de Tubulação</h1>
+                <p class="text-slate-400">Artefato Grok Studio • Espessura controlada por Schedule para aço</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Painel de Entrada -->
+            <div class="lg:col-span-5 artifact-card">
+                <h2 class="text-xl font-medium mb-8 text-slate-100">Parâmetros da Tubulação</h2>
+                
+                <div class="space-y-7">
+                    <!-- Material -->
+                    <div>
+                        <label class="input-label">Material</label>
+                        <select id="material" onchange="updateInterface()" class="input-field">
+                            <option value="Aço Carbono" selected>Aço Carbono (ASME B36.10)</option>
+                            <option value="Inox">Aço Inoxidável (ASME B36.19)</option>
+                            <option value="Cobre">Cobre (ASTM B88 Type L)</option>
+                            <option value="Alumínio">Alumínio (comercial)</option>
+                        </select>
+                    </div>
+
+                    <!-- Bitola -->
+                    <div>
+                        <label class="input-label">Bitola Nominal (NPS – polegadas)</label>
+                        <select id="nps" onchange="updateDimensions()" class="input-field"></select>
+                    </div>
+
+                    <!-- Schedule (visível apenas para Aço Carbono e Inox) -->
+                    <div id="schedule_group">
+                        <label class="input-label">Schedule</label>
+                        <select id="schedule" onchange="updateDimensions()" class="input-field"></select>
+                    </div>
+
+                    <!-- Espessura (somente leitura - atualizada automaticamente) -->
+                    <div>
+                        <label class="input-label">Espessura da Parede</label>
+                        <div class="relative">
+                            <input type="text" id="thickness" readonly class="input-field bg-slate-700 cursor-default">
+                            <span class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">mm</span>
+                        </div>
+                    </div>
+
+                    <!-- Comprimento -->
+                    <div>
+                        <label class="input-label">Comprimento do tubo (metros)</label>
+                        <input type="number" id="length" value="1.00" step="0.01" min="0.01" class="input-field">
+                    </div>
+
+                    <button onclick="calcularPeso()" class="btn-primary">
+                        Calcular Peso
+                    </button>
+                </div>
+            </div>
+
+            <!-- Resultados -->
+            <div class="lg:col-span-7 result-card">
+                <h2 class="text-2xl font-semibold mb-8 text-slate-900">Resultados do Cálculo</h2>
+                
+                <div class="grid grid-cols-2 gap-6 mb-10">
+                    <div class="bg-white rounded-3xl p-7 shadow">
+                        <div class="text-slate-500 text-sm mb-1">Peso por metro</div>
+                        <div id="weight_per_m" class="result-value text-slate-900">—</div>
+                        <div class="text-slate-400 text-lg">kg/m</div>
+                    </div>
+                    <div class="bg-white rounded-3xl p-7 shadow">
+                        <div class="text-slate-500 text-sm mb-1">Peso total</div>
+                        <div id="total_weight" class="result-value text-slate-900">—</div>
+                        <div class="text-slate-400 text-lg">kg</div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl p-7 shadow">
+                    <h3 class="font-semibold text-slate-700 mb-5">Memorial de Cálculo</h3>
+                    <div id="memorial" class="space-y-4 text-slate-600 text-[15px]"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center text-xs text-slate-500 mt-12">
+            Artefato Grok Studio • Espessura controlada por Schedule para tubos de aço
+        </div>
+    </div>
+
+    <script>
+        // Dados completos das normas
+        const b36_10 = {
+            "1/8": { od: 10.3, schedules: { "SCH 40": 1.73, "SCH 80": 2.41, "STD": 1.73, "XS": 2.41 } },
+            "1/4": { od: 13.7, schedules: { "SCH 40": 2.24, "SCH 80": 3.02, "STD": 2.24, "XS": 3.02 } },
+            "3/8": { od: 17.1, schedules: { "SCH 40": 2.31, "SCH 80": 3.20, "STD": 2.31, "XS": 3.20 } },
+            "1/2": { od: 21.3, schedules: { "SCH 40": 2.77, "SCH 80": 3.73, "STD": 2.77, "XS": 3.73 } },
+            "3/4": { od: 26.7, schedules: { "SCH 40": 2.87, "SCH 80": 3.91, "STD": 2.87, "XS": 3.91 } },
+            "1":   { od: 33.4, schedules: { "SCH 40": 3.38, "SCH 80": 4.55, "STD": 3.38, "XS": 4.55 } },
+            "1 1/4":{ od: 42.2, schedules: { "SCH 40": 3.56, "SCH 80": 4.85, "STD": 3.56, "XS": 4.85 } },
+            "1 1/2":{ od: 48.3, schedules: { "SCH 40": 3.68, "SCH 80": 5.08, "STD": 3.68, "XS": 5.08 } },
+            "2":   { od: 60.3, schedules: { "SCH 40": 3.91, "SCH 80": 5.54, "STD": 3.91, "XS": 5.54 } },
+            "2 1/2":{ od: 73.0, schedules: { "SCH 40": 5.16, "SCH 80": 7.01, "STD": 5.16, "XS": 7.01 } },
+            "3":   { od: 88.9, schedules: { "SCH 40": 5.49, "SCH 80": 7.62, "STD": 5.49, "XS": 7.62 } },
+            "4":   { od: 114.3, schedules: { "SCH 40": 6.02, "SCH 80": 8.56, "STD": 6.02, "XS": 8.56 } },
+            "6":   { od: 168.3, schedules: { "SCH 40": 7.11, "SCH 80": 10.97, "STD": 7.11, "XS": 10.97 } },
+            "8":   { od: 219.1, schedules: { "SCH 40": 8.18, "SCH 80": 12.70, "STD": 8.18, "XS": 12.70 } },
+            "10":  { od: 273.1, schedules: { "SCH 40": 9.27, "SCH 80": 15.09, "STD": 9.27, "XS": 15.09 } },
+            "12":  { od: 323.9, schedules: { "SCH 40": 9.53, "SCH 80": 17.48, "STD": 9.53, "XS": 17.48 } },
+            "14":  { od: 355.6, schedules: { "SCH 40": 11.13, "SCH 80": 19.05, "STD": 9.53, "XS": 12.70 } },
+            "16":  { od: 406.4, schedules: { "SCH 40": 12.70, "SCH 80": 21.44, "STD": 9.53, "XS": 12.70 } },
+            "18":  { od: 457.2, schedules: { "SCH 40": 14.27, "SCH 80": 23.83, "STD": 9.53, "XS": 12.70 } },
+            "20":  { od: 508.0, schedules: { "SCH 40": 15.09, "SCH 80": 26.19, "STD": 9.53, "XS": 12.70 } },
+            "24":  { od: 609.6, schedules: { "SCH 40": 17.48, "SCH 80": 30.96, "STD": 9.53, "XS": 12.70 } }
+        };
+
+        const b36_19 = {
+            "1/8":  { od: 10.3, schedules: { "SCH 5S": 1.24, "SCH 10S": 1.73, "SCH 40S": 2.41, "SCH 80S": 3.02 } },
+            "1/4":  { od: 13.7, schedules: { "SCH 5S": 1.65, "SCH 10S": 2.24, "SCH 40S": 3.02, "SCH 80S": 3.40 } },
+            "3/8":  { od: 17.1, schedules: { "SCH 5S": 1.65, "SCH 10S": 2.31, "SCH 40S": 3.20, "SCH 80S": 3.58 } },
+            "1/2":  { od: 21.3, schedules: { "SCH 5S": 1.65, "SCH 10S": 2.11, "SCH 40S": 2.77, "SCH 80S": 3.73 } },
+            "3/4":  { od: 26.7, schedules: { "SCH 5S": 1.65, "SCH 10S": 2.11, "SCH 40S": 2.87, "SCH 80S": 3.91 } },
+            "1":    { od: 33.4, schedules: { "SCH 5S": 1.65, "SCH 10S": 2.77, "SCH 40S": 3.38, "SCH 80S": 4.55 } },
+            "1 1/4":{ od: 42.2, schedules: { "SCH 5S": 1.65, "SCH 10S": 2.77, "SCH 40S": 3.56, "SCH 80S": 4.85 } },
+            "1 1/2":{ od: 48.3, schedules: { "SCH 5S": 1.65, "SCH 10S": 2.77, "SCH 40S": 3.68, "SCH 80S": 5.08 } },
+            "2":    { od: 60.3, schedules: { "SCH 5S": 1.65, "SCH 10S": 2.77, "SCH 40S": 3.91, "SCH 80S": 5.54 } },
+            "2 1/2":{ od: 73.0, schedules: { "SCH 5S": 2.11, "SCH 10S": 3.05, "SCH 40S": 5.16, "SCH 80S": 7.01 } },
+            "3":    { od: 88.9, schedules: { "SCH 5S": 2.11, "SCH 10S": 3.05, "SCH 40S": 5.49, "SCH 80S": 7.62 } },
+            "4":    { od: 114.3, schedules: { "SCH 5S": 2.11, "SCH 10S": 3.05, "SCH 40S": 6.02, "SCH 80S": 8.56 } },
+            "6":    { od: 168.3, schedules: { "SCH 5S": 2.77, "SCH 10S": 3.40, "SCH 40S": 7.11, "SCH 80S": 10.97 } },
+            "8":    { od: 219.1, schedules: { "SCH 5S": 2.77, "SCH 10S": 3.76, "SCH 40S": 8.18, "SCH 80S": 12.70 } },
+            "10":   { od: 273.1, schedules: { "SCH 5S": 3.40, "SCH 10S": 4.19, "SCH 40S": 9.27, "SCH 80S": 15.09 } },
+            "12":   { od: 323.9, schedules: { "SCH 5S": 3.96, "SCH 10S": 4.57, "SCH 40S": 9.53, "SCH 80S": 12.70 } },
+            "14":   { od: 355.6, schedules: { "SCH 5S": 3.96, "SCH 10S": 4.78, "SCH 40S": 9.53, "SCH 80S": 12.70 } },
+            "16":   { od: 406.4, schedules: { "SCH 5S": 4.19, "SCH 10S": 4.78, "SCH 40S": 9.53, "SCH 80S": 12.70 } },
+            "18":   { od: 457.2, schedules: { "SCH 5S": 4.19, "SCH 10S": 4.78, "SCH 40S": 9.53, "SCH 80S": 12.70 } },
+            "20":   { od: 508.0, schedules: { "SCH 5S": 4.78, "SCH 10S": 5.54, "SCH 40S": 9.53, "SCH 80S": 12.70 } },
+            "24":   { od: 609.6, schedules: { "SCH 5S": 5.54, "SCH 10S": 6.35, "SCH 40S": 9.53, "SCH 80S": 12.70 } }
+        };
+
+        const copperSizes = [
+            {nps: "1/4", od: 9.53, t: 0.89}, {nps: "3/8", od: 12.70, t: 1.14},
+            {nps: "1/2", od: 15.88, t: 1.02}, {nps: "5/8", od: 19.05, t: 1.07},
+            {nps: "3/4", od: 22.23, t: 1.14}, {nps: "1", od: 28.58, t: 1.27},
+            {nps: "1 1/4", od: 34.93, t: 1.40}, {nps: "1 1/2", od: 41.28, t: 1.52},
+            {nps: "2", od: 53.98, t: 1.78}, {nps: "3", od: 79.38, t: 2.29},
+            {nps: "4", od: 104.78, t: 2.79}
+        ];
+
+        const aluminumSizes = [
+            {nps: "1/2", od: 21.3, t: 2.77}, {nps: "3/4", od: 26.7, t: 2.87},
+            {nps: "1", od: 33.4, t: 3.38}, {nps: "2", od: 60.3, t: 3.91}
+        ];
+
+        const densities = {
+            "Aço Carbono": 7850,
+            "Inox": 8000,
+            "Cobre": 8960,
+            "Alumínio": 2700
+        };
+
+        function updateInterface() {
+            const material = document.getElementById("material").value;
+            const scheduleGroup = document.getElementById("schedule_group");
+
+            if (material === "Aço Carbono" || material === "Inox") {
+                scheduleGroup.style.display = "block";
+            } else {
+                scheduleGroup.style.display = "none";
+            }
+            populateNPS();
+            populateSchedules(material);
+        }
+
+        function populateNPS() {
+            const material = document.getElementById("material").value;
+            const select = document.getElementById("nps");
+            select.innerHTML = "";
+
+            let list = [];
+            if (material === "Aço Carbono") list = Object.keys(b36_10).map(nps => ({nps, od: b36_10[nps].od}));
+            else if (material === "Inox") list = Object.keys(b36_19).map(nps => ({nps, od: b36_19[nps].od}));
+            else if (material === "Cobre") list = copperSizes.map(s => ({nps: s.nps, od: s.od}));
+            else list = aluminumSizes.map(s => ({nps: s.nps, od: s.od}));
+
+            list.sort((a, b) => a.od - b.od);
+
+            list.forEach(item => {
+                const opt = document.createElement("option");
+                opt.value = item.nps;
+                opt.textContent = `${item.nps}" (OD ${item.od.toFixed(1)} mm)`;
+                select.appendChild(opt);
+            });
+            updateDimensions();
+        }
+
+        function populateSchedules(material) {
+            const select = document.getElementById("schedule");
+            select.innerHTML = "";
+            let opts = [];
+            if (material === "Aço Carbono") opts = ["SCH 40", "SCH 80", "STD", "XS"];
+            else if (material === "Inox") opts = ["SCH 5S", "SCH 10S", "SCH 40S", "SCH 80S"];
+            opts.forEach(s => {
+                const opt = document.createElement("option");
+                opt.value = s;
+                opt.textContent = s;
+                select.appendChild(opt);
+            });
+        }
+
+        function updateDimensions() {
+            const material = document.getElementById("material").value;
+            const nps = document.getElementById("nps").value;
+            const schedule = document.getElementById("schedule").value;
+
+            let data = null;
+            if (material === "Aço Carbono" && b36_10[nps]) data = b36_10[nps];
+            else if (material === "Inox" && b36_19[nps]) data = b36_19[nps];
+
+            if (data && schedule && data.schedules[schedule]) {
+                document.getElementById("thickness").value = data.schedules[schedule].toFixed(2);
+            } else if (material === "Cobre") {
+                const found = copperSizes.find(s => s.nps === nps);
+                if (found) document.getElementById("thickness").value = found.t.toFixed(2);
+            } else if (material === "Alumínio") {
+                const found = aluminumSizes.find(s => s.nps === nps);
+                if (found) document.getElementById("thickness").value = found.t.toFixed(2);
+            }
+        }
+
+        window.calcularPeso = function() {
+            const material = document.getElementById("material").value;
+            const nps = document.getElementById("nps").value;
+            const t = parseFloat(document.getElementById("thickness").value) || 0;
+            const length = parseFloat(document.getElementById("length").value) || 1;
+            const density = densities[material];
+
+            let od = 0;
+            if (material === "Aço Carbono" && b36_10[nps]) od = b36_10[nps].od;
+            else if (material === "Inox" && b36_19[nps]) od = b36_19[nps].od;
+            else if (material === "Cobre") {
+                const found = copperSizes.find(s => s.nps === nps);
+                if (found) od = found.od;
+            } else if (material === "Alumínio") {
+                const found = aluminumSizes.find(s => s.nps === nps);
+                if (found) od = found.od;
+            }
+
+            if (od <= 0 || t <= 0) {
+                alert("Por favor, selecione uma bitola e schedule válidos.");
+                return;
+            }
+
+            const area = Math.PI * (od * t - t * t);
+            const weightPerM = (area * density) / 1000000;
+            const totalWeight = weightPerM * length;
+
+            document.getElementById("weight_per_m").textContent = weightPerM.toFixed(2);
+            document.getElementById("total_weight").textContent = totalWeight.toFixed(2);
+
+            const norma = material === "Aço Carbono" ? "ASME B36.10" : 
+                         (material === "Inox" ? "ASME B36.19" : 
+                         (material === "Cobre" ? "ASTM B88 Type L" : "Dimensões comerciais"));
+
+            const memorialHTML = `
+                <div><strong>Material:</strong> ${material} — Densidade = ${density} kg/m³</div>
+                <div><strong>Norma:</strong> ${norma}</div>
+                <div><strong>Dimensões:</strong> NPS ${nps}" | OD = ${od.toFixed(1)} mm | Espessura = ${t.toFixed(2)} mm</div>
+                <div class="font-mono mt-2">Área transversal = ${area.toFixed(2)} mm²</div>
+                <div class="font-mono">Peso linear = ${weightPerM.toFixed(4)} kg/m</div>
+                <div class="font-mono">Peso total (${length.toFixed(2)} m) = ${totalWeight.toFixed(2)} kg</div>
+            `;
+            document.getElementById("memorial").innerHTML = memorialHTML;
+        };
+
+        // Inicialização
+        window.onload = function() {
+            updateInterface();
+        };
+    </script>
+</body>
+</html>
