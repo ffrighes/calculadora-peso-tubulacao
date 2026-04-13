@@ -316,6 +316,10 @@
     </div>
 
     <script>
+        // Armazena dados da última velocidade calculada (para uso no PDF).
+        // Reiniciado sempre que os parâmetros do tubo mudam.
+        let _velocityData = null;
+
         // Dados completos das normas
         const b36_10 = {
             "1/8": { od: 10.3, schedules: { "SCH 40": 1.73, "SCH 80": 2.41, "STD": 1.73, "XS": 2.41 } },
@@ -453,6 +457,11 @@
                 const found = aluminumSizes.find(s => s.nps === nps);
                 if (found) document.getElementById("thickness").value = found.t.toFixed(2);
             }
+
+            // Limpa resultados de velocidade sempre que os parâmetros do tubo mudam,
+            // para evitar inconsistência entre os dados do tubo e a velocidade no PDF.
+            _velocityData = null;
+            document.getElementById("velocity_section").style.display = "none";
         }
 
         window.calcularPeso = function() {
@@ -500,9 +509,6 @@
             document.getElementById("memorial").innerHTML = memorialHTML;
             document.getElementById("btn_pdf").style.display = "block";
         };
-
-        // Armazena dados da velocidade para uso no PDF
-        let _velocityData = null;
 
         window.calcularVelocidade = function() {
             const material  = document.getElementById("material").value;
@@ -554,17 +560,17 @@
 
             // Exibe resultados
             document.getElementById("inner_diameter").textContent = di.toFixed(2);
-            document.getElementById("inner_area").textContent     = ai_cm2.toFixed(4);
-            document.getElementById("velocity_result").textContent = velocity.toFixed(3);
+            document.getElementById("inner_area").textContent     = ai_cm2.toFixed(2);
+            document.getElementById("velocity_result").textContent = velocity.toFixed(2);
             document.getElementById("velocity_section").style.display = "block";
 
             // Memorial da velocidade
             const q_m3h = q_m3s * 3600;
             document.getElementById("velocity_memorial").innerHTML = `
                 <div style="margin-bottom:6px;"><strong>Di</strong> = OD − 2t = ${od.toFixed(1)} − 2×${t.toFixed(2)} = <strong>${di.toFixed(2)} mm</strong></div>
-                <div style="margin-bottom:6px;"><strong>Ai</strong> = π × (Di/2)² = π × (${(di/2).toFixed(2)} mm)² = <strong>${(ai_m2*1e6).toFixed(2)} mm²</strong> = <strong>${ai_cm2.toFixed(4)} cm²</strong></div>
-                <div style="margin-bottom:6px;"><strong>Q</strong> = ${flowRate} ${unitsLabel[flowUnit]} = ${q_m3s.toExponential(4)} m³/s = ${q_m3h.toFixed(4)} m³/h</div>
-                <div style="margin-bottom:6px;"><strong>v</strong> = Q / Ai = ${q_m3s.toExponential(4)} / ${ai_m2.toExponential(4)} = <strong>${velocity.toFixed(3)} m/s</strong></div>
+                <div style="margin-bottom:6px;"><strong>Ai</strong> = π × (Di/2)² = π × (${(di/2).toFixed(2)})² = <strong>${(ai_m2*1e6).toFixed(2)} mm²</strong> = <strong>${ai_cm2.toFixed(2)} cm²</strong></div>
+                <div style="margin-bottom:6px;"><strong>Q</strong> = ${flowRate} ${unitsLabel[flowUnit]} = ${(q_m3s * 1000).toFixed(4)} L/s = ${q_m3h.toFixed(4)} m³/h</div>
+                <div style="margin-bottom:6px;"><strong>v</strong> = Q / Ai = ${(q_m3s * 1e6).toFixed(4)} cm³/s ÷ ${ai_cm2.toFixed(2)} cm² = <strong>${velocity.toFixed(2)} m/s</strong></div>
             `;
 
             // Guarda dados para o PDF
@@ -610,14 +616,14 @@
     </tr>
     <tr>
       <td class="lbl">Diâm. Interno (Di)</td><td class="val">${_velocityData.di.toFixed(2)} mm</td>
-      <td class="lbl">Área Interna (Ai)</td><td class="val">${_velocityData.ai_cm2.toFixed(4)} cm²</td>
+      <td class="lbl">Área Interna (Ai)</td><td class="val">${_velocityData.ai_cm2.toFixed(2)} cm²</td>
     </tr>
   </table>
 </div>
 <div class="results-row" style="padding-top:12px;">
   <div class="result-box" style="background:#0369a1; border-radius:10px; padding:16px 20px; text-align:center; flex:1;">
     <div class="res-label" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;color:rgba(255,255,255,0.8);">Velocidade do Fluido</div>
-    <div class="res-value" style="font-size:44px;font-weight:700;line-height:1;color:#fff;">${_velocityData.velocity.toFixed(3)}</div>
+    <div class="res-value" style="font-size:44px;font-weight:700;line-height:1;color:#fff;">${_velocityData.velocity.toFixed(2)}</div>
     <div class="res-unit" style="font-size:14px;margin-top:4px;color:rgba(255,255,255,0.75);">m/s</div>
   </div>
 </div>
@@ -630,15 +636,15 @@
     </tr>
     <tr>
       <td class="formula">Ai = π × (Di/2)² &nbsp;[Área da seção interna]</td>
-      <td class="result">${(_velocityData.ai_m2 * 1e6).toFixed(2)} mm²</td>
+      <td class="result">${(_velocityData.ai_m2 * 1e6).toFixed(2)} mm² = ${_velocityData.ai_cm2.toFixed(2)} cm²</td>
     </tr>
     <tr>
       <td class="formula">Q &nbsp;[Vazão volumétrica]</td>
-      <td class="result">${_velocityData.q_m3s.toExponential(4)} m³/s</td>
+      <td class="result">${_velocityData.flowRate} ${_velocityData.flowUnit} = ${(_velocityData.q_m3s * 1000).toFixed(4)} L/s</td>
     </tr>
     <tr>
       <td class="formula">v = Q / Ai &nbsp;[Velocidade do fluido]</td>
-      <td class="result">${_velocityData.velocity.toFixed(3)} m/s</td>
+      <td class="result">${_velocityData.velocity.toFixed(2)} m/s</td>
     </tr>
   </table>
 </div>` : '';
