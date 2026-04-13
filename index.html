@@ -105,6 +105,76 @@
         .btn-pdf:hover {
             background-color: #0284c8;
         }
+
+        .btn-secondary {
+            width: 100%;
+            background-color: #0369a1;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            padding: 18px;
+            border-radius: 9999px;
+            margin-top: 16px;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-secondary:hover {
+            background-color: #075985;
+        }
+
+        .velocity-section {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+
+        .velocity-card {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 24px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .velocity-value {
+            font-size: 3.2rem;
+            font-weight: 600;
+            color: #0369a1;
+            line-height: 1;
+        }
+
+        .section-divider {
+            border-top: 1px solid #475569;
+            margin-top: 24px;
+            padding-top: 24px;
+        }
+
+        .section-subtitle {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 20px;
+        }
+
+        .flow-input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .flow-input-row .input-field:first-child {
+            flex: 1;
+        }
+
+        .flow-unit-select {
+            flex-shrink: 0;
+            width: auto;
+            padding-left: 12px;
+            padding-right: 12px;
+        }
     </style>
 </head>
 <body>
@@ -164,6 +234,28 @@
                     <button onclick="calcularPeso()" class="btn-primary">
                         Calcular Peso
                     </button>
+
+                    <!-- Velocidade do Fluido -->
+                    <div class="section-divider">
+                        <div class="section-subtitle">Velocidade do Fluido</div>
+
+                        <div>
+                            <label class="input-label">Vazão Volumétrica</label>
+                            <div class="flow-input-row">
+                                <input type="number" id="flow_rate" value="10" step="0.1" min="0" class="input-field">
+                                <select id="flow_unit" class="input-field flow-unit-select">
+                                    <option value="m3/h">m³/h</option>
+                                    <option value="m3/s">m³/s</option>
+                                    <option value="L/s">L/s</option>
+                                    <option value="L/min">L/min</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button onclick="calcularVelocidade()" class="btn-secondary">
+                            Calcular Velocidade
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -187,6 +279,31 @@
                 <div class="bg-white rounded-3xl p-7 shadow">
                     <h3 class="font-semibold text-slate-700 mb-5">Memorial de Cálculo</h3>
                     <div id="memorial" class="space-y-4 text-slate-600 text-[15px]"></div>
+                </div>
+
+                <!-- Resultado de Velocidade -->
+                <div id="velocity_section" class="velocity-section" style="display:none;">
+                    <h3 class="font-semibold text-slate-700 mb-5">Velocidade do Fluido</h3>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
+                        <div class="bg-white rounded-3xl p-5 shadow" style="text-align:center;">
+                            <div class="text-slate-500 text-sm mb-1">Diâm. Interno</div>
+                            <div id="inner_diameter" class="result-value text-slate-900" style="font-size:2rem;">—</div>
+                            <div class="text-slate-400">mm</div>
+                        </div>
+                        <div class="bg-white rounded-3xl p-5 shadow" style="text-align:center;">
+                            <div class="text-slate-500 text-sm mb-1">Área Interna</div>
+                            <div id="inner_area" class="result-value text-slate-900" style="font-size:2rem;">—</div>
+                            <div class="text-slate-400">cm²</div>
+                        </div>
+                        <div class="velocity-card">
+                            <div style="font-size:0.8rem; font-weight:600; color:#0369a1; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;">Velocidade</div>
+                            <div id="velocity_result" class="velocity-value">—</div>
+                            <div style="color:#0284c7; font-weight:600; margin-top:4px;">m/s</div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl p-5 shadow">
+                        <div id="velocity_memorial" style="font-size:14px; color:#475569; font-family:monospace;"></div>
+                    </div>
                 </div>
 
                 <button id="btn_pdf" onclick="exportarPDF()" class="btn-pdf">📄 Exportar PDF</button>
@@ -384,6 +501,79 @@
             document.getElementById("btn_pdf").style.display = "block";
         };
 
+        // Armazena dados da velocidade para uso no PDF
+        let _velocityData = null;
+
+        window.calcularVelocidade = function() {
+            const material  = document.getElementById("material").value;
+            const nps       = document.getElementById("nps").value;
+            const t         = parseFloat(document.getElementById("thickness").value) || 0;
+            const flowRate  = parseFloat(document.getElementById("flow_rate").value) || 0;
+            const flowUnit  = document.getElementById("flow_unit").value;
+
+            // Obtém o OD da tubulação selecionada
+            let od = 0;
+            if (material === "Aço Carbono" && b36_10[nps]) od = b36_10[nps].od;
+            else if (material === "Inox" && b36_19[nps])   od = b36_19[nps].od;
+            else if (material === "Cobre") {
+                const found = copperSizes.find(s => s.nps === nps);
+                if (found) od = found.od;
+            } else if (material === "Alumínio") {
+                const found = aluminumSizes.find(s => s.nps === nps);
+                if (found) od = found.od;
+            }
+
+            if (od <= 0 || t <= 0) {
+                alert("Selecione uma bitola válida antes de calcular a velocidade.");
+                return;
+            }
+            if (flowRate <= 0) {
+                alert("Informe uma vazão volumétrica válida (maior que zero).");
+                return;
+            }
+
+            const di = od - 2 * t; // mm
+            if (di <= 0) {
+                alert("Diâmetro interno inválido: a espessura é maior que o raio externo.");
+                return;
+            }
+
+            const di_m = di / 1000;                      // m
+            const ai_m2 = Math.PI * (di_m / 2) * (di_m / 2); // m²
+            const ai_cm2 = ai_m2 * 10000;               // cm²
+
+            // Converte vazão para m³/s
+            let q_m3s = 0;
+            const unitsLabel = { "m3/h": "m³/h", "m3/s": "m³/s", "L/s": "L/s", "L/min": "L/min" };
+            if (flowUnit === "m3/h")  q_m3s = flowRate / 3600;
+            else if (flowUnit === "m3/s") q_m3s = flowRate;
+            else if (flowUnit === "L/s")  q_m3s = flowRate / 1000;
+            else if (flowUnit === "L/min") q_m3s = flowRate / 60000;
+
+            const velocity = q_m3s / ai_m2; // m/s
+
+            // Exibe resultados
+            document.getElementById("inner_diameter").textContent = di.toFixed(2);
+            document.getElementById("inner_area").textContent     = ai_cm2.toFixed(4);
+            document.getElementById("velocity_result").textContent = velocity.toFixed(3);
+            document.getElementById("velocity_section").style.display = "block";
+
+            // Memorial da velocidade
+            const q_m3h = q_m3s * 3600;
+            document.getElementById("velocity_memorial").innerHTML = `
+                <div style="margin-bottom:6px;"><strong>Di</strong> = OD − 2t = ${od.toFixed(1)} − 2×${t.toFixed(2)} = <strong>${di.toFixed(2)} mm</strong></div>
+                <div style="margin-bottom:6px;"><strong>Ai</strong> = π × (Di/2)² = π × (${(di/2).toFixed(2)} mm)² = <strong>${(ai_m2*1e6).toFixed(2)} mm²</strong> = <strong>${ai_cm2.toFixed(4)} cm²</strong></div>
+                <div style="margin-bottom:6px;"><strong>Q</strong> = ${flowRate} ${unitsLabel[flowUnit]} = ${q_m3s.toExponential(4)} m³/s = ${q_m3h.toFixed(4)} m³/h</div>
+                <div style="margin-bottom:6px;"><strong>v</strong> = Q / Ai = ${q_m3s.toExponential(4)} / ${ai_m2.toExponential(4)} = <strong>${velocity.toFixed(3)} m/s</strong></div>
+            `;
+
+            // Guarda dados para o PDF
+            _velocityData = { di, ai_cm2, ai_m2, velocity, flowRate, flowUnit: unitsLabel[flowUnit], q_m3s, q_m3h };
+
+            // Exibe botão PDF caso ainda não esteja visível
+            document.getElementById("btn_pdf").style.display = "block";
+        };
+
         window.exportarPDF = function() {
             const material  = document.getElementById('material').value;
             const nps       = document.getElementById('nps').value;
@@ -409,6 +599,49 @@
             const t    = parseFloat(thickness);
             const area = Math.PI * (od * t - t * t);
             const now  = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            const velocitySection = _velocityData ? `
+<div class="section-params" style="border-left-color: #0369a1; margin-top: 0;">
+  <div class="section-label" style="color:#0369a1;">Parâmetros de Velocidade do Fluido</div>
+  <table class="params-table">
+    <tr>
+      <td class="lbl">Vazão</td><td class="val">${_velocityData.flowRate} ${_velocityData.flowUnit}</td>
+      <td class="lbl">Vazão (m³/h)</td><td class="val">${_velocityData.q_m3h.toFixed(4)} m³/h</td>
+    </tr>
+    <tr>
+      <td class="lbl">Diâm. Interno (Di)</td><td class="val">${_velocityData.di.toFixed(2)} mm</td>
+      <td class="lbl">Área Interna (Ai)</td><td class="val">${_velocityData.ai_cm2.toFixed(4)} cm²</td>
+    </tr>
+  </table>
+</div>
+<div class="results-row" style="padding-top:12px;">
+  <div class="result-box" style="background:#0369a1; border-radius:10px; padding:16px 20px; text-align:center; flex:1;">
+    <div class="res-label" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;color:rgba(255,255,255,0.8);">Velocidade do Fluido</div>
+    <div class="res-value" style="font-size:44px;font-weight:700;line-height:1;color:#fff;">${_velocityData.velocity.toFixed(3)}</div>
+    <div class="res-unit" style="font-size:14px;margin-top:4px;color:rgba(255,255,255,0.75);">m/s</div>
+  </div>
+</div>
+<div class="section-memorial">
+  <div class="section-label">Memorial — Velocidade do Fluido</div>
+  <table class="memorial-table">
+    <tr>
+      <td class="formula">Di = OD − 2t &nbsp;[Diâmetro interno]</td>
+      <td class="result">${_velocityData.di.toFixed(2)} mm</td>
+    </tr>
+    <tr>
+      <td class="formula">Ai = π × (Di/2)² &nbsp;[Área da seção interna]</td>
+      <td class="result">${(_velocityData.ai_m2 * 1e6).toFixed(2)} mm²</td>
+    </tr>
+    <tr>
+      <td class="formula">Q &nbsp;[Vazão volumétrica]</td>
+      <td class="result">${_velocityData.q_m3s.toExponential(4)} m³/s</td>
+    </tr>
+    <tr>
+      <td class="formula">v = Q / Ai &nbsp;[Velocidade do fluido]</td>
+      <td class="result">${_velocityData.velocity.toFixed(3)} m/s</td>
+    </tr>
+  </table>
+</div>` : '';
 
             const win = window.open('', '_blank');
             win.document.write(`<!DOCTYPE html>
@@ -548,7 +781,7 @@
 </div>
 
 <div class="section-memorial">
-  <div class="section-label">Memorial de Cálculo</div>
+  <div class="section-label">Memorial de Cálculo — Peso</div>
   <table class="memorial-table">
     <tr>
       <td class="formula">A = π × (OD × t − t²) &nbsp;[Área da seção transversal]</td>
@@ -564,6 +797,8 @@
     </tr>
   </table>
 </div>
+
+${velocitySection}
 
 <div class="footer">
   <span>Calculadora de Peso de Tubulação</span>
